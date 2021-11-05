@@ -50,35 +50,21 @@ class Snake:
         self.turns = {}
         self.direction = "UP"
 
-    def is_move_allowed(self, newDir):
-        if self.direction == "UP":
-            return not newDir == "DOWN"
-        elif self.direction == "DOWN":
-            return not newDir == "UP"
-        elif self.direction == "RIGHT":
-            return not newDir == "LEFT"
-        elif self.direction == "LEFT":
-            return not newDir == "RIGHT" 
+    def turn(self, new_direction):
+        if new_direction == "LEFT" and self.direction != "RIGHT":
+            self.direction = "LEFT"
+            self.turns[self.head.position[:]] = self.direction
+        elif new_direction == "RIGHT" and self.direction != "LEFT":
+            self.direction = "RIGHT"
+            self.turns[self.head.position[:]] = self.direction
+        elif new_direction == "UP" and self.direction != "DOWN":
+            self.direction = "UP"
+            self.turns[self.head.position[:]] = self.direction
+        elif new_direction == "DOWN" and self.direction != "UP":
+            self.direction = "DOWN"
+            self.turns[self.head.position[:]] = self.direction
 
     def move(self,rows):
-        keys = pygame.key.get_pressed()
-        for key in keys:
-            if keys[pygame.K_LEFT] and self.is_move_allowed("LEFT"):
-                self.direction = "LEFT"
-                self.turns[self.head.position[:]] = self.direction
-
-            elif keys[pygame.K_RIGHT] and self.is_move_allowed("RIGHT"):
-                self.direction = "RIGHT"
-                self.turns[self.head.position[:]] = self.direction
-
-            elif keys[pygame.K_UP] and self.is_move_allowed("UP"):
-                self.direction = "UP"
-                self.turns[self.head.position[:]] = self.direction
-
-            elif keys[pygame.K_DOWN] and self.is_move_allowed("DOWN"):
-                self.direction = "DOWN"
-                self.turns[self.head.position[:]] = self.direction
-        
         for c in self.body:
             p = c.position
             if p in self.turns:
@@ -95,22 +81,25 @@ class Snake:
 
 
 class Game:
-    def __init__(self, screen_size, rows):
+    def __init__(self, screen_size, rows, FPS):
         pygame.display.set_caption("SNAAAAAAAAAAAAAAKE!!!")
         self.screen_size = screen_size
         self.rows = rows
         self.game_window = pygame.display.set_mode((screen_size,screen_size))
         self.snake = self.create_snake()
         self.current_snack = self.create_snack()
-        #snack = Cube(randomSnack(rows,snake), color=(0,255,0))
+        self.clock = pygame.time.Clock()
+        self.fps = FPS
 
     def create_snake(self):
         return Snake((10,10))
 
     def create_snack(self):
-        return Cube(randomSnack(self.rows,self.snake), (0,255,0), "UP")
+        return Cube(self.place_random_snack(), (0,255,0), "UP")
 
     def tick(self):
+        pygame.time.delay(50)
+        self.clock.tick(self.fps)
         self.snake.move(self.rows)
         if self.snake.body[0].position == self.current_snack.position:
             self.snake.grow_tail()
@@ -126,6 +115,9 @@ class Game:
                 break
         self.draw_game()
 
+    def turn_snake(self,new_direction):
+        self.snake.turn(new_direction)
+
 
 
     def draw_game(self):
@@ -139,31 +131,42 @@ class Game:
             pygame.draw.line(self.game_window,(255,255,255), (0,line_endpoint), (self.screen_size,line_endpoint))
         pygame.display.update()
 
-def randomSnack(rows,snake):
-    while True:
-        snack_x_pos = random.randrange(rows)
-        snack_y_pos = random.randrange(rows)
-        if len(list(filter(lambda z:z.position == (snack_x_pos,snack_y_pos), snake.body))) > 0:
-            continue
-        else:
-            break
-    return (snack_x_pos,snack_y_pos)
+    def place_random_snack(self):
+        while True:
+            snack_x_pos = random.randrange(self.rows)
+            snack_y_pos = random.randrange(self.rows)
+            if len(list(filter(lambda z:z.position == (snack_x_pos,snack_y_pos), self.snake.body))) > 0:
+                continue
+            else:
+                break
+        return (snack_x_pos,snack_y_pos)
 
 
 
 def game_loop():
     running = True
-    game_clock = pygame.time.Clock()
     FPS = 10
-    game_instance = Game(800,20)
+    game_instance = Game(800,20,FPS)
     
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
-        pygame.time.delay(50)
-        game_clock.tick(FPS)
+        keys = pygame.key.get_pressed()
+        for key in keys:
+            if keys[pygame.K_LEFT]:
+                game_instance.turn_snake("LEFT")
+
+            elif keys[pygame.K_RIGHT]:
+                game_instance.turn_snake("RIGHT")
+
+            elif keys[pygame.K_UP]:
+                game_instance.turn_snake("UP")
+
+            elif keys[pygame.K_DOWN]:
+                game_instance.turn_snake("DOWN")
+
         game_instance.tick()
     pygame.quit()
 
